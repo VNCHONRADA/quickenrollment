@@ -1,0 +1,67 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        // Publishing a migration re-stamps its filename with the current time,
+        // so an install that re-publishes to pick up a later migration ends up
+        // with a second, differently-named copy of this one that Laravel has no
+        // record of running. Checking for the table keeps that copy harmless
+        // instead of failing the whole migrate run.
+        if (Schema::hasTable($this->tableName())) {
+            return;
+        }
+
+        Schema::create($this->tableName(), function (Blueprint $table): void {
+            $table->id();
+
+            // Bounded because both columns sit in the unique index below:
+            // 255 + 255 under utf8mb4 needs a 2040-byte index, which is
+            // over the limit on MySQL/MariaDB configurations still using
+            // COMPACT row format or a 767-byte prefix.
+            $table->string('panel_id', 191)->nullable()->index();
+            $table->string('resource_class', 191);
+
+            $table->string('label')->nullable();
+            $table->string('icon')->nullable();
+            $table->string('active_icon')->nullable();
+            $table->string('navigation_group')->nullable();
+            $table->boolean('navigation_group_overridden')->default(false);
+            $table->string('navigation_parent_item')->nullable();
+            $table->string('parent_resource_class')->nullable();
+            $table->integer('sort')->nullable();
+            $table->boolean('is_visible')->default(true);
+
+            $table->string('badge')->nullable();
+            $table->string('badge_type')->default('static');
+            $table->string('badge_model')->nullable();
+            $table->json('badge_conditions')->nullable();
+            $table->string('badge_color')->nullable();
+            $table->string('badge_tooltip')->nullable();
+
+            $table->string('default_label')->nullable();
+            $table->string('default_icon')->nullable();
+            $table->string('default_navigation_group')->nullable();
+            $table->boolean('is_orphaned')->default(false);
+
+            $table->timestamps();
+
+            $table->unique(['panel_id', 'resource_class'], 'frs_panel_resource_unique');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists($this->tableName());
+    }
+
+    protected function tableName(): string
+    {
+        return config('filament-resource-manager.table_name', 'filament_resource_settings');
+    }
+};
